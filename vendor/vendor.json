@@ -758,6 +758,12 @@
 			"versionExact": "v1.6.9"
 		},
 		{
+			"checksumSHA1": "wGzyGa2l/8lZYjkwvVYmMvlfZhM=",
+			"path": "github.com/aws/aws-sdk-go/service/codepipeline",
+			"revision": "3db9e25ee178e244fbdaba729ed2ecc96969422b",
+			"revisionTime": "2017-01-16T22:32:11Z"
+		},
+		{
 			"checksumSHA1": "7MZKknL6W7gtRx1DphCgv3TK//0=",
 			"path": "github.com/aws/aws-sdk-go/service/directoryservice",
 			"revision": "36670f6ab1769ad77fa5f7e2c194398733503635",
@@ -1261,10 +1267,11 @@
 			"revisionTime": "2016-06-30T18:09:21Z"
 		},
 		{
-			"checksumSHA1": "PkPgpx/FYoIJCbihlRZEp7oHG9Q=",
+			"checksumSHA1": "w4ksomRMCZjbwnPupNvmTt5E6v8=",
 			"comment": "v1.8.6",
 			"path": "github.com/go-ini/ini",
-			"revision": "afbd495e5aaea13597b5e14fe514ddeaa4d76fc3"
+			"revision": "6f66b0e091edb3c7b380f7c4f0f884274d550b67",
+			"revisionTime": "2016-12-21T12:03:40Z"
 		},
 		{
 			"checksumSHA1": "3zc56m9VciDqi0mYxbLdtvhR1fk=",
@@ -2005,10 +2012,11 @@
 			"revisionTime": "2017-01-04T10:03:54Z"
 		},
 		{
-			"checksumSHA1": "3/Bhy+ua/DCv2ElMD5GzOYSGN6g=",
+			"checksumSHA1": "0ZrwvB6KoGPj2PoDNSEJwxQ6Mog=",
 			"comment": "0.2.2-2-gc01cf91",
 			"path": "github.com/jmespath/go-jmespath",
-			"revision": "c01cf91b011868172fdcd9f41838e80c9d716264"
+			"revision": "bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d",
+			"revisionTime": "2016-08-03T19:07:31Z"
 		},
 		{
 			"checksumSHA1": "prTvKyT6m7XgfkT9lmVSLNkq3cE=",

@@ -27,6 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/codebuild"
 	"github.com/aws/aws-sdk-go/service/codecommit"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
+	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/aws/aws-sdk-go/service/directoryservice"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -144,6 +145,7 @@ type AWSClient struct {
 	codebuildconn         *codebuild.CodeBuild
 	codedeployconn        *codedeploy.CodeDeploy
 	codecommitconn        *codecommit.CodeCommit
+	codepipelineconn      *codepipeline.CodePipeline
 	sfnconn               *sfn.SFN
 	ssmconn               *ssm.SSM
 	wafconn               *waf.WAF
@@ -271,6 +273,7 @@ func (c *Config) Client() (interface{}, error) {
 	client.codecommitconn = codecommit.New(sess)
 	client.codebuildconn = codebuild.New(sess)
 	client.codedeployconn = codedeploy.New(sess)
+	client.codepipelineconn = codepipeline.New(sess)
 	client.dsconn = directoryservice.New(sess)
 	client.dynamodbconn = dynamodb.New(dynamoSess)
 	client.ec2conn = ec2.New(awsEc2Sess)
