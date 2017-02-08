@@ -161,10 +161,26 @@ func expandPipelineArtifactStore(d *schema.ResourceData) *codepipeline.ArtifactS
 func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclaration {
 	configs := d.Get("stage").([]interface{})
 	var pipelineStages []*codepipeline.StageDeclaration
+
 	for _, stage := range configs {
 		data := stage.(map[string]interface{})
+		actionData := data["action"].([]interface{})
+		var actions []*codepipeline.ActionDeclaration
+		for _, taction := range actionData {
+			action := taction.(map[string]interface{})
+			actions = append(actions, &codepipeline.ActionDeclaration{
+				ActionTypeId: &codepipeline.ActionTypeId{
+					Category: aws.String(action["category"].(string)),
+					Owner:    aws.String(action["owner"].(string)),
+					Provider: aws.String(action["provider"].(string)),
+					Version:  aws.String(action["version"].(string)),
+				},
+				Name: aws.String(action["name"].(string)),
+			})
+		}
 		pipelineStages = append(pipelineStages, &codepipeline.StageDeclaration{
-			Name: aws.String(data["name"].(string)),
+			Name:    aws.String(data["name"].(string)),
+			Actions: actions,
 		})
 	}
 	return pipelineStages
