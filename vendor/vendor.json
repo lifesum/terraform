@@ -804,7 +804,13 @@
 			"versionExact": "v1.6.25"
 		},
 		{
-			"checksumSHA1": "NYRd4lqocAcZdkEvLHAZYyXz8Bs=",
+			"checksumSHA1": "wGzyGa2l/8lZYjkwvVYmMvlfZhM=",
+			"path": "github.com/aws/aws-sdk-go/service/codepipeline",
+			"revision": "3db9e25ee178e244fbdaba729ed2ecc96969422b",
+			"revisionTime": "2017-01-16T22:32:11Z"
+		},
+		{
+			"checksumSHA1": "Za8qpzWLuINPVNczth0NuK5YsIk=",
 			"path": "github.com/aws/aws-sdk-go/service/configservice",
 			"revision": "b2852089fcfd0794d25d57f193e15121ab8a6d9e",
 			"revisionTime": "2017-02-17T18:38:06Z",
