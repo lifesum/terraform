@@ -117,12 +117,14 @@ func resourceAwsCodePipeline() *schema.Resource {
 
 func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).codepipelineconn
-	pipelineStages = expandPipelineStages(d)
-	pipelineArtificatStore = expandPipelineArtifactStore(d)
+	pipelineStages := expandPipelineStages(d)
+	pipelineArtifactStore := expandPipelineArtifactStore(d)
 
 	pipeline := &codepipeline.PipelineDeclaration{
-		Name:    aws.String(d.Get("name").(string)),
-		RoleArn: aws.String(d.Get("role_arn").(string)),
+		Name:          aws.String(d.Get("name").(string)),
+		RoleArn:       aws.String(d.Get("role_arn").(string)),
+		ArtifactStore: pipelineArtifactStore,
+		Stages:        pipelineStages,
 	}
 	params := &codepipeline.CreatePipelineInput{
 		Pipeline: pipeline,
@@ -146,14 +148,26 @@ func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) err
 	return resourceAwsCodePipelineUpdate(d, meta)
 }
 
-func expandPipelineArtifactStore(d *schema.ResourceData) []codepipeline.ArtifactStore {
-	pipelineArtificatStore := []codepipeline.ArtifactStore{}
-	return pipelineArtificatStore
+func expandPipelineArtifactStore(d *schema.ResourceData) *codepipeline.ArtifactStore {
+	configs := d.Get("artifact_store").([]interface{})
+	data := configs[0].(map[string]interface{})
+	pipelineArtifactStore := codepipeline.ArtifactStore{
+		Location: aws.String(data["location"].(string)),
+		Type:     aws.String(data["type"].(string)),
+	}
+	return &pipelineArtifactStore
 }
 
-func expandPipelineStages(d *schema.ResourceData) []codepipeline.StageDeclaration {
-	pipelineArtificatStore := []codepipeline.StageDeclaration{{}}
-	return pipelineArtificatStore
+func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclaration {
+	configs := d.Get("stage").([]interface{})
+	var pipelineStages []*codepipeline.StageDeclaration
+	for _, stage := range configs {
+		data := stage.(map[string]interface{})
+		pipelineStages = append(pipelineStages, &codepipeline.StageDeclaration{
+			Name: aws.String(data["name"].(string)),
+		})
+	}
+	return pipelineStages
 }
 
 func resourceAwsCodePipelineRead(d *schema.ResourceData, meta interface{}) error {
