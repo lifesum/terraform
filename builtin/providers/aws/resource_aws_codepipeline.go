@@ -1,13 +1,21 @@
 package aws
 
-import "github.com/hashicorp/terraform/helper/schema"
+import (
+	"fmt"
+	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/codepipeline"
+	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/helper/schema"
+)
 
 func resourceAwsCodePipeline() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceAwsCodepipelineCreate,
-		Read:   resourceAwsCodepipelineRead,
-		Update: resourceAwsCodepipelineUpdate,
-		Delete: resourceAwsCodepipelineDelete,
+		Create: resourceAwsCodePipelineCreate,
+		Read:   resourceAwsCodePipelineRead,
+		Update: resourceAwsCodePipelineUpdate,
+		Delete: resourceAwsCodePipelineDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -60,22 +68,42 @@ func resourceAwsCodePipeline() *schema.Resource {
 								},
 							},
 						},
-
-						"stages": {
+					},
+				},
+			},
+			"stage": {
+				Type:     schema.TypeList,
+				Required: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"action": {
 							Type:     schema.TypeList,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"actions": {
-										Type:     schema.TypeList,
+									"category": {
+										Type:     schema.TypeString,
 										Required: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"action_type_id": {
-													Type: schema.TypeString,
-												},
-											},
-										},
+									},
+									"owner": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"provider": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"version": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
 									},
 								},
 							},
@@ -87,20 +115,55 @@ func resourceAwsCodePipeline() *schema.Resource {
 	}
 }
 
-func resourceAwsCodepipelineCreate(d *schema.ResourceData, meta interface{}) error {
-	codepipelineconn := meta.(*AWSClient).codepipelineconn
+func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) error {
+	conn := meta.(*AWSClient).codepipelineconn
+	pipelineStages = expandPipelineStages(d)
+	pipelineArtificatStore = expandPipelineArtifactStore(d)
 
-	return resourceAwsCodepipelineUpdate(d, meta)
+	pipeline := &codepipeline.PipelineDeclaration{
+		Name:    aws.String(d.Get("name").(string)),
+		RoleArn: aws.String(d.Get("role_arn").(string)),
+	}
+	params := &codepipeline.CreatePipelineInput{
+		Pipeline: pipeline,
+	}
+
+	var resp *codepipeline.CreatePipelineOutput
+	err := resource.Retry(30*time.Second, func() *resource.RetryError {
+		var err error
+
+		resp, err = conn.CreatePipeline(params)
+
+		if err != nil {
+			return resource.RetryableError(err)
+		}
+
+		return resource.NonRetryableError(err)
+	})
+	if err != nil {
+		return fmt.Errorf("[ERROR] Error creating CodePipeline: %s", err)
+	}
+	return resourceAwsCodePipelineUpdate(d, meta)
 }
 
-func resourceAwsCodepipelineRead(d *schema.ResourceData, meta interface{}) error {
+func expandPipelineArtifactStore(d *schema.ResourceData) []codepipeline.ArtifactStore {
+	pipelineArtificatStore := []codepipeline.ArtifactStore{}
+	return pipelineArtificatStore
+}
+
+func expandPipelineStages(d *schema.ResourceData) []codepipeline.StageDeclaration {
+	pipelineArtificatStore := []codepipeline.StageDeclaration{{}}
+	return pipelineArtificatStore
+}
+
+func resourceAwsCodePipelineRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceAwsCodepipelineUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceAwsCodePipelineUpdate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceAwsCodepipelineDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceAwsCodePipelineDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
