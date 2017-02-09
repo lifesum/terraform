@@ -279,10 +279,197 @@ func testAccCheckAWSCodePipelineDestroy(s *terraform.State) error {
 	// return fmt.Errorf("Default error in CodeBuild Test")
 }
 
+// {
+//   "Statement": [
+//     {
+//       "Action": [
+//         "s3:GetObject",
+//         "s3:GetObjectVersion",
+//         "s3:GetBucketVersioning"
+//       ],
+//       "Resource": "*",
+//       "Effect": "Allow"
+//     },
+//     {
+//       "Action": [
+//         "s3:PutObject"
+//       ],
+//       "Resource": [
+//         "arn:aws:s3:::codepipeline*",
+//         "arn:aws:s3:::elasticbeanstalk*"
+//       ],
+//       "Effect": "Allow"
+//     },
+//     {
+//       "Action": [
+//         "codecommit:CancelUploadArchive",
+//         "codecommit:GetBranch",
+//         "codecommit:GetCommit",
+//         "codecommit:GetUploadArchiveStatus",
+//         "codecommit:UploadArchive"
+//       ],
+//       "Resource": "*",
+//       "Effect": "Allow"
+//     },
+//     {
+//       "Action": [
+//         "codedeploy:CreateDeployment",
+//         "codedeploy:GetApplicationRevision",
+//         "codedeploy:GetDeployment",
+//         "codedeploy:GetDeploymentConfig",
+//         "codedeploy:RegisterApplicationRevision"
+//       ],
+//       "Resource": "*",
+//       "Effect": "Allow"
+//     },
+//     {
+//       "Action": [
+//         "elasticbeanstalk:*",
+//         "ec2:*",
+//         "elasticloadbalancing:*",
+//         "autoscaling:*",
+//         "cloudwatch:*",
+//         "s3:*",
+//         "sns:*",
+//         "cloudformation:*",
+//         "rds:*",
+//         "sqs:*",
+//         "ecs:*",
+//         "iam:PassRole"
+//       ],
+//       "Resource": "*",
+//       "Effect": "Allow"
+//     },
+//     {
+//       "Action": [
+//         "lambda:InvokeFunction",
+//         "lambda:ListFunctions"
+//       ],
+//       "Resource": "*",
+//       "Effect": "Allow"
+//     },
+//     {
+//       "Action": [
+//         "opsworks:CreateDeployment",
+//         "opsworks:DescribeApps",
+//         "opsworks:DescribeCommands",
+//         "opsworks:DescribeDeployments",
+//         "opsworks:DescribeInstances",
+//         "opsworks:DescribeStacks",
+//         "opsworks:UpdateApp",
+//         "opsworks:UpdateStack"
+//       ],
+//       "Resource": "*",
+//       "Effect": "Allow"
+//     },
+//     {
+//       "Action": [
+//         "cloudformation:CreateStack",
+//         "cloudformation:DeleteStack",
+//         "cloudformation:DescribeStacks",
+//         "cloudformation:UpdateStack",
+//         "cloudformation:CreateChangeSet",
+//         "cloudformation:DeleteChangeSet",
+//         "cloudformation:DescribeChangeSet",
+//         "cloudformation:ExecuteChangeSet",
+//         "cloudformation:SetStackPolicy",
+//         "cloudformation:ValidateTemplate",
+//         "iam:PassRole"
+//       ],
+//       "Resource": "*",
+//       "Effect": "Allow"
+//     },
+//     {
+//       "Action": [
+//         "codebuild:BatchGetBuilds",
+//         "codebuild:StartBuild"
+//       ],
+//       "Resource": "*",
+//       "Effect": "Allow"
+//     }
+//   ],
+//   "Version": "2012-10-17"
+// }
+
+// {
+//     "pipeline": {
+//         "roleArn": "arn:aws:iam::925188551538:role/AWS-CodePipeline-Service",
+//         "stages": [
+//             {
+//                 "name": "Source",
+//                 "actions": [
+//                     {
+//                         "inputArtifacts": [],
+//                         "name": "Source",
+//                         "actionTypeId": {
+//                             "category": "Source",
+//                             "owner": "ThirdParty",
+//                             "version": "1",
+//                             "provider": "GitHub"
+//                         },
+//                         "outputArtifacts": [
+//                             {
+//                                 "name": "MyApp"
+//                             }
+//                         ],
+//                         "configuration": {
+//                             "Owner": "lifesum-terraform",
+//                             "Repo": "test",
+//                             "Branch": "master",
+//                             "OAuthToken": "****"
+//                         },
+//                         "runOrder": 1
+//                     }
+//                 ]
+//             },
+//             {
+//                 "name": "Build",
+//                 "actions": [
+//                     {
+//                         "inputArtifacts": [
+//                             {
+//                                 "name": "MyApp"
+//                             }
+//                         ],
+//                         "name": "CodeBuild",
+//                         "actionTypeId": {
+//                             "category": "Build",
+//                             "owner": "AWS",
+//                             "version": "1",
+//                             "provider": "CodeBuild"
+//                         },
+//                         "outputArtifacts": [
+//                             {
+//                                 "name": "MyAppBuild"
+//                             }
+//                         ],
+//                         "configuration": {
+//                             "ProjectName": "test"
+//                         },
+//                         "runOrder": 1
+//                     }
+//                 ]
+//             }
+//         ],
+//         "artifactStore": {
+//             "type": "S3",
+//             "location": "codepipeline-us-west-2-679037673204"
+//         },
+//         "name": "test",
+//         "version": 1
+//     }
+// }
+
 func testAccAWSCodePipelineConfig_basic(rName string) string {
 	return fmt.Sprintf(`
+resource "aws_s3_bucket" "main" {
+    bucket = "tf-test-pipeline-%s"
+    acl = "private"
+}
+
+
 resource "aws_iam_role" "codepipeline_role" {
-  name = "codebuild-role-%s"
+  name = "codepipeline-role-%s"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -290,7 +477,7 @@ resource "aws_iam_role" "codepipeline_role" {
     {
       "Effect": "Allow",
       "Principal": {
-        "Service": "codebuild.amazonaws.com"
+        "Service": "codepipeline.amazonaws.com"
       },
       "Action": "sts:AssumeRole"
     }
@@ -305,20 +492,39 @@ resource "aws_codepipeline" "foo" {
   role_arn = "${aws_iam_role.codepipeline_role.arn}"
 
   artifact_store {
-  		location = "test"
+  		location = "${aws_s3_bucket.main.bucket}"
   		type = "S3"
   }
 
   stage {
-	name = "first_stage"
+	name = "Source"
 	action {
-			name = "notsure"
-			category = "Deploy"
+			name = "Source"
+			category = "Source"
+			owner = "ThirdParty"
+			provider = "GitHub"
+			version = "1"
+			configuration = <<EOF
+{
+    "Owner": "lifesum-terraform",
+    "Repo": "test",
+    "Branch": "master",
+    "OAuthToken": "****"
+}
+EOF
+		}
+  } 
+
+  stage {
+	name = "Build"
+	action {
+			name = "Build"
+			category = "Build"
 			owner = "AWS"
-			provider = "CodeDeploy"
-			version = "foo"
+			provider = "CodeBuild"
+			version = "1"
 		}
   }
 }
-`, rName, rName)
+`, rName, rName, rName)
 }

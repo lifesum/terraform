@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"encoding/json"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/hashicorp/terraform/helper/resource"
@@ -39,6 +41,7 @@ func resourceAwsCodePipeline() *schema.Resource {
 			"artifact_store": {
 				Type:     schema.TypeList,
 				Required: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"location": {
@@ -73,6 +76,7 @@ func resourceAwsCodePipeline() *schema.Resource {
 			},
 			"stage": {
 				Type:     schema.TypeList,
+				MinItems: 2,
 				Required: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -85,6 +89,10 @@ func resourceAwsCodePipeline() *schema.Resource {
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"configuration": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"category": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -168,14 +176,20 @@ func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclarati
 		var actions []*codepipeline.ActionDeclaration
 		for _, taction := range actionData {
 			action := taction.(map[string]interface{})
+			conf := map[string]*string{}
+			if action["configuration"].(string) != "" {
+				json.Unmarshal([]byte(action["configuration"].(string)), &conf)
+			}
 			actions = append(actions, &codepipeline.ActionDeclaration{
 				ActionTypeId: &codepipeline.ActionTypeId{
 					Category: aws.String(action["category"].(string)),
 					Owner:    aws.String(action["owner"].(string)),
+
 					Provider: aws.String(action["provider"].(string)),
 					Version:  aws.String(action["version"].(string)),
 				},
-				Name: aws.String(action["name"].(string)),
+				Name:          aws.String(action["name"].(string)),
+				Configuration: conf,
 			})
 		}
 		pipelineStages = append(pipelineStages, &codepipeline.StageDeclaration{
@@ -183,6 +197,7 @@ func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclarati
 			Actions: actions,
 		})
 	}
+	fmt.Printf("%#v", pipelineStages)
 	return pipelineStages
 }
 
