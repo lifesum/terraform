@@ -135,8 +135,8 @@ func resourceAwsCodePipeline() *schema.Resource {
 
 func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).codepipelineconn
-	pipelineStages := expandPipelineStages(d)
-	pipelineArtifactStore := expandPipelineArtifactStore(d)
+	pipelineStages := expandAwsCodePipelineStages(d)
+	pipelineArtifactStore := expandAwsCodePipelineArtifactStore(d)
 
 	pipeline := &codepipeline.PipelineDeclaration{
 		Name:          aws.String(d.Get("name").(string)),
@@ -168,7 +168,7 @@ func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) err
 	return resourceAwsCodePipelineUpdate(d, meta)
 }
 
-func expandPipelineArtifactStore(d *schema.ResourceData) *codepipeline.ArtifactStore {
+func expandAwsCodePipelineArtifactStore(d *schema.ResourceData) *codepipeline.ArtifactStore {
 	configs := d.Get("artifact_store").([]interface{})
 	data := configs[0].(map[string]interface{})
 	pipelineArtifactStore := codepipeline.ArtifactStore{
@@ -177,6 +177,7 @@ func expandPipelineArtifactStore(d *schema.ResourceData) *codepipeline.ArtifactS
 	}
 	return &pipelineArtifactStore
 }
+
 func flattenAwsCodePipelineArtifactStore(artifactStore *codepipeline.ArtifactStore) []interface{} {
 	values := map[string]interface{}{}
 	values["type"] = *artifactStore.Type
@@ -184,14 +185,15 @@ func flattenAwsCodePipelineArtifactStore(artifactStore *codepipeline.ArtifactSto
 	return []interface{}{values}
 
 }
-func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclaration {
+
+func expandAwsCodePipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclaration {
 	configs := d.Get("stage").([]interface{})
 	pipelineStages := []*codepipeline.StageDeclaration{}
 
 	for _, stage := range configs {
 		data := stage.(map[string]interface{})
 		a := data["action"].([]interface{})
-		actions := expandPipelineActions(a)
+		actions := expandAwsCodePipelineActions(a)
 		pipelineStages = append(pipelineStages, &codepipeline.StageDeclaration{
 			Name:    aws.String(data["name"].(string)),
 			Actions: actions,
@@ -200,7 +202,22 @@ func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclarati
 	return pipelineStages
 }
 
-func expandPipelineActions(s []interface{}) []*codepipeline.ActionDeclaration {
+func flattenAwsCodePipelineStages(stages []*codepipeline.StageDeclaration) []interface{} {
+	stagesList := []interface{}{}
+	for _, stage := range stages {
+		values := map[string]interface{}{}
+		values["name"] = *stage.Name
+		values["action"] = flattenAwsCodePipelineStageActions(stage.Actions)
+		stagesList = append(stagesList, values)
+	}
+
+	// values["type"] = *artifactStore.Type
+	// values["location"] = *artifactStore.Location
+	return stagesList
+
+}
+
+func expandAwsCodePipelineActions(s []interface{}) []*codepipeline.ActionDeclaration {
 	actions := []*codepipeline.ActionDeclaration{}
 	for _, taction := range s {
 		action := taction.(map[string]interface{})
@@ -209,10 +226,10 @@ func expandPipelineActions(s []interface{}) []*codepipeline.ActionDeclaration {
 			json.Unmarshal([]byte(action["configuration"].(string)), &conf)
 		}
 		oa := action["output_artifacts"].([]interface{})
-		outputArtifacts := expandPipelineActionsOutputArtifacts(oa)
+		outputArtifacts := expandAwsCodePipelineActionsOutputArtifacts(oa)
 
 		ia := action["input_artifacts"].([]interface{})
-		inputArtifacts := expandPipelineActionsInputArtifacts(ia)
+		inputArtifacts := expandAwsCodePipelineActionsInputArtifacts(ia)
 
 		actions = append(actions, &codepipeline.ActionDeclaration{
 			ActionTypeId: &codepipeline.ActionTypeId{
@@ -230,7 +247,31 @@ func expandPipelineActions(s []interface{}) []*codepipeline.ActionDeclaration {
 	}
 	return actions
 }
-func expandPipelineActionsOutputArtifacts(s []interface{}) []*codepipeline.OutputArtifact {
+
+func flattenAwsCodePipelineStageActions(actions []*codepipeline.ActionDeclaration) []interface{} {
+	actionsList := []interface{}{}
+	for _, action := range actions {
+		values := map[string]interface{}{}
+		values["configuration"] = flattenAwsCodePipelineStageActionConfiguration(action.Configuration)
+		values["category"] = *action.ActionTypeId.Category
+		values["owner"] = *action.ActionTypeId.Owner
+		values["provider"] = *action.ActionTypeId.Provider
+		values["version"] = *action.ActionTypeId.Version
+		values["output_artifacts"] = flattenAwsCodePipelineActionsOutputArtifacts(action.OutputArtifacts)
+		values["input_artifacts"] = flattenAwsCodePipelineActionsInputArtifacts(action.InputArtifacts)
+		values["name"] = *action.Name
+		actionsList = append(actionsList, values)
+	}
+	return actionsList
+}
+
+func flattenAwsCodePipelineStageActionConfiguration(config map[string]*string) string {
+	delete(config, "OAuthToken")
+	flat, _ := json.Marshal(config)
+	return string(flat)
+}
+
+func expandAwsCodePipelineActionsOutputArtifacts(s []interface{}) []*codepipeline.OutputArtifact {
 	outputArtifacts := []*codepipeline.OutputArtifact{}
 	for _, artifact := range s {
 		outputArtifacts = append(outputArtifacts, &codepipeline.OutputArtifact{
@@ -239,7 +280,16 @@ func expandPipelineActionsOutputArtifacts(s []interface{}) []*codepipeline.Outpu
 	}
 	return outputArtifacts
 }
-func expandPipelineActionsInputArtifacts(s []interface{}) []*codepipeline.InputArtifact {
+
+func flattenAwsCodePipelineActionsOutputArtifacts(artifacts []*codepipeline.OutputArtifact) []string {
+	values := []string{}
+	for _, artifact := range artifacts {
+		values = append(values, *artifact.Name)
+	}
+	return values
+}
+
+func expandAwsCodePipelineActionsInputArtifacts(s []interface{}) []*codepipeline.InputArtifact {
 	outputArtifacts := []*codepipeline.InputArtifact{}
 	for _, artifact := range s {
 		outputArtifacts = append(outputArtifacts, &codepipeline.InputArtifact{
@@ -247,6 +297,14 @@ func expandPipelineActionsInputArtifacts(s []interface{}) []*codepipeline.InputA
 		})
 	}
 	return outputArtifacts
+}
+
+func flattenAwsCodePipelineActionsInputArtifacts(artifacts []*codepipeline.InputArtifact) []string {
+	values := []string{}
+	for _, artifact := range artifacts {
+		values = append(values, *artifact.Name)
+	}
+	return values
 }
 
 func resourceAwsCodePipelineRead(d *schema.ResourceData, meta interface{}) error {
@@ -264,8 +322,13 @@ func resourceAwsCodePipelineRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
+	if err := d.Set("stage", flattenAwsCodePipelineStages(pipeline.Stages)); err != nil {
+		return err
+	}
+
 	d.Set("name", pipeline.Name)
 	d.Set("role_arn", pipeline.RoleArn)
+	fmt.Printf("%#v", d)
 	return nil
 }
 
