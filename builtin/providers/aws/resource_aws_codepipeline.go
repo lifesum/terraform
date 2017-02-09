@@ -163,7 +163,6 @@ func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		return fmt.Errorf("[ERROR] Error creating CodePipeline: %s", err)
 	}
-	fmt.Printf("%#v", resp)
 	d.SetId(*resp.Pipeline.Name)
 
 	return resourceAwsCodePipelineUpdate(d, meta)
@@ -178,7 +177,13 @@ func expandPipelineArtifactStore(d *schema.ResourceData) *codepipeline.ArtifactS
 	}
 	return &pipelineArtifactStore
 }
+func flattenAwsCodePipelineArtifactStore(artifactStore *codepipeline.ArtifactStore) []interface{} {
+	values := map[string]interface{}{}
+	values["type"] = *artifactStore.Type
+	values["location"] = *artifactStore.Location
+	return []interface{}{values}
 
+}
 func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclaration {
 	configs := d.Get("stage").([]interface{})
 	pipelineStages := []*codepipeline.StageDeclaration{}
@@ -192,7 +197,6 @@ func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclarati
 			Actions: actions,
 		})
 	}
-	fmt.Printf("%#v", pipelineStages)
 	return pipelineStages
 }
 
@@ -246,13 +250,42 @@ func expandPipelineActionsInputArtifacts(s []interface{}) []*codepipeline.InputA
 }
 
 func resourceAwsCodePipelineRead(d *schema.ResourceData, meta interface{}) error {
+	conn := meta.(*AWSClient).codepipelineconn
+	resp, err := conn.GetPipeline(&codepipeline.GetPipelineInput{
+		Name: aws.String(d.Id()),
+	})
+
+	if err != nil {
+		return fmt.Errorf("[ERROR] Error retreiving Pipeline: %q", err)
+	}
+	pipeline := resp.Pipeline
+
+	if err := d.Set("artifact_store", flattenAwsCodePipelineArtifactStore(pipeline.ArtifactStore)); err != nil {
+		return err
+	}
+
+	d.Set("name", pipeline.Name)
+	d.Set("role_arn", pipeline.RoleArn)
 	return nil
 }
 
 func resourceAwsCodePipelineUpdate(d *schema.ResourceData, meta interface{}) error {
+	// Todo
 	return nil
 }
 
 func resourceAwsCodePipelineDelete(d *schema.ResourceData, meta interface{}) error {
+	conn := meta.(*AWSClient).codepipelineconn
+
+	_, err := conn.DeletePipeline(&codepipeline.DeletePipelineInput{
+		Name: aws.String(d.Id()),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	d.SetId("")
+
 	return nil
 }
