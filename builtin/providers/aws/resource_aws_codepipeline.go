@@ -163,7 +163,9 @@ func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		return fmt.Errorf("[ERROR] Error creating CodePipeline: %s", err)
 	}
-	fmt.Printf("here")
+	fmt.Printf("%#v", resp)
+	d.SetId(*resp.Pipeline.Name)
+
 	return resourceAwsCodePipelineUpdate(d, meta)
 }
 

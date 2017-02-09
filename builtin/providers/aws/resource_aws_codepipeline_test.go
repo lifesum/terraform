@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
@@ -221,62 +223,50 @@ func TestAccAWSCodePipeline_timeoutValidation(t *testing.T) {
 }
 
 func testAccCheckAWSCodePipelineExists(n string) resource.TestCheckFunc {
-	// 	return func(s *terraform.State) error {
-	// 		rs, ok := s.RootModule().Resources[n]
-	// 		if !ok {
-	// 			return fmt.Errorf("Not found: %s", n)
-	// 		}
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("Not found: %s", n)
+		}
 
-	// 		if rs.Primary.ID == "" {
-	// 			return fmt.Errorf("No CodeBuild Project ID is set")
-	// 		}
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("No CodePipeline ID is set")
+		}
 
-	// 		conn := testAccProvider.Meta().(*AWSClient).codebuildconn
+		conn := testAccProvider.Meta().(*AWSClient).codepipelineconn
 
-	// 		out, err := conn.BatchGetProjects(&codebuild.BatchGetProjectsInput{
-	// 			Names: []*string{
-	// 				aws.String(rs.Primary.ID),
-	// 			},
-	// 		})
+		_, err := conn.GetPipeline(&codepipeline.GetPipelineInput{
+			Name: aws.String(rs.Primary.ID),
+		})
 
-	// 		if err != nil {
-	// 			return err
-	// 		}
-
-	// 		if len(out.Projects) < 1 {
-	// 			return fmt.Errorf("No project found")
-	// 		}
-
-	return nil
-	// 	}
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 }
 
 func testAccCheckAWSCodePipelineDestroy(s *terraform.State) error {
-	// conn := testAccProvider.Meta().(*AWSClient).codepipelineconn
+	conn := testAccProvider.Meta().(*AWSClient).codepipelineconn
 
-	// for _, rs := range s.RootModule().Resources {
-	// 	if rs.Type != "aws_codepipeline" {
-	// 		continue
-	// 	}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "aws_codepipeline" {
+			continue
+		}
 
-	// 	out, err := conn.BatchGetProjects(&codebuild.BatchGetProjectsInput{
-	// 		Names: []*string{
-	// 			aws.String(rs.Primary.ID),
-	// 		},
-	// 	})
+		out, err := conn.GetPipeline(&codepipeline.GetPipelineInput{
+			Name: aws.String(rs.Primary.ID),
+		})
 
-	// 	if err != nil {
-	// 		return err
-	// 	}
+		if err == nil {
+			return fmt.Errorf("Expected AWS CodePipeline to be gone, but was still found")
+		}
+		fmt.Printf("%#v", err)
+		fmt.Printf("%#v", out)
+		return nil
+	}
 
-	// 	if out != nil && len(out.Projects) > 0 {
-	// 		return fmt.Errorf("Expected AWS CodeBuild Project to be gone, but was still found")
-	// 	}
-
-	return nil
-	// }
-
-	// return fmt.Errorf("Default error in CodeBuild Test")
+	return fmt.Errorf("Default error in CodeBuild Test")
 }
 
 // {
