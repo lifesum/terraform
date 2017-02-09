@@ -504,12 +504,13 @@ resource "aws_codepipeline" "foo" {
 			owner = "ThirdParty"
 			provider = "GitHub"
 			version = "1"
+			output_artifacts = ["test"]
 			configuration = <<EOF
 {
     "Owner": "lifesum-terraform",
     "Repo": "test",
     "Branch": "master",
-    "OAuthToken": "****"
+    "OAuthToken": "0000000000000000000000000000000000000000"
 }
 EOF
 		}
@@ -522,7 +523,13 @@ EOF
 			category = "Build"
 			owner = "AWS"
 			provider = "CodeBuild"
+			input_artifacts = ["test"]
 			version = "1"
+			configuration = <<EOF
+{
+    "ProjectName": "test"
+}
+EOF
 		}
   }
 }

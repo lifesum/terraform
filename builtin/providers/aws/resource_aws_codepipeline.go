@@ -109,6 +109,16 @@ func resourceAwsCodePipeline() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
+									"input_artifacts": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem:     &schema.Schema{Type: schema.TypeString},
+									},
+									"output_artifacts": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem:     &schema.Schema{Type: schema.TypeString},
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -153,6 +163,7 @@ func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		return fmt.Errorf("[ERROR] Error creating CodePipeline: %s", err)
 	}
+	fmt.Printf("here")
 	return resourceAwsCodePipelineUpdate(d, meta)
 }
 
@@ -168,30 +179,12 @@ func expandPipelineArtifactStore(d *schema.ResourceData) *codepipeline.ArtifactS
 
 func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclaration {
 	configs := d.Get("stage").([]interface{})
-	var pipelineStages []*codepipeline.StageDeclaration
+	pipelineStages := []*codepipeline.StageDeclaration{}
 
 	for _, stage := range configs {
 		data := stage.(map[string]interface{})
-		actionData := data["action"].([]interface{})
-		var actions []*codepipeline.ActionDeclaration
-		for _, taction := range actionData {
-			action := taction.(map[string]interface{})
-			conf := map[string]*string{}
-			if action["configuration"].(string) != "" {
-				json.Unmarshal([]byte(action["configuration"].(string)), &conf)
-			}
-			actions = append(actions, &codepipeline.ActionDeclaration{
-				ActionTypeId: &codepipeline.ActionTypeId{
-					Category: aws.String(action["category"].(string)),
-					Owner:    aws.String(action["owner"].(string)),
-
-					Provider: aws.String(action["provider"].(string)),
-					Version:  aws.String(action["version"].(string)),
-				},
-				Name:          aws.String(action["name"].(string)),
-				Configuration: conf,
-			})
-		}
+		a := data["action"].([]interface{})
+		actions := expandPipelineActions(a)
 		pipelineStages = append(pipelineStages, &codepipeline.StageDeclaration{
 			Name:    aws.String(data["name"].(string)),
 			Actions: actions,
@@ -199,6 +192,55 @@ func expandPipelineStages(d *schema.ResourceData) []*codepipeline.StageDeclarati
 	}
 	fmt.Printf("%#v", pipelineStages)
 	return pipelineStages
+}
+
+func expandPipelineActions(s []interface{}) []*codepipeline.ActionDeclaration {
+	actions := []*codepipeline.ActionDeclaration{}
+	for _, taction := range s {
+		action := taction.(map[string]interface{})
+		conf := map[string]*string{}
+		if action["configuration"].(string) != "" {
+			json.Unmarshal([]byte(action["configuration"].(string)), &conf)
+		}
+		oa := action["output_artifacts"].([]interface{})
+		outputArtifacts := expandPipelineActionsOutputArtifacts(oa)
+
+		ia := action["input_artifacts"].([]interface{})
+		inputArtifacts := expandPipelineActionsInputArtifacts(ia)
+
+		actions = append(actions, &codepipeline.ActionDeclaration{
+			ActionTypeId: &codepipeline.ActionTypeId{
+				Category: aws.String(action["category"].(string)),
+				Owner:    aws.String(action["owner"].(string)),
+
+				Provider: aws.String(action["provider"].(string)),
+				Version:  aws.String(action["version"].(string)),
+			},
+			Name:            aws.String(action["name"].(string)),
+			Configuration:   conf,
+			OutputArtifacts: outputArtifacts,
+			InputArtifacts:  inputArtifacts,
+		})
+	}
+	return actions
+}
+func expandPipelineActionsOutputArtifacts(s []interface{}) []*codepipeline.OutputArtifact {
+	outputArtifacts := []*codepipeline.OutputArtifact{}
+	for _, artifact := range s {
+		outputArtifacts = append(outputArtifacts, &codepipeline.OutputArtifact{
+			Name: aws.String(artifact.(string)),
+		})
+	}
+	return outputArtifacts
+}
+func expandPipelineActionsInputArtifacts(s []interface{}) []*codepipeline.InputArtifact {
+	outputArtifacts := []*codepipeline.InputArtifact{}
+	for _, artifact := range s {
+		outputArtifacts = append(outputArtifacts, &codepipeline.InputArtifact{
+			Name: aws.String(artifact.(string)),
+		})
+	}
+	return outputArtifacts
 }
 
 func resourceAwsCodePipelineRead(d *schema.ResourceData, meta interface{}) error {
