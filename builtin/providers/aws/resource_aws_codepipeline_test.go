@@ -178,43 +178,45 @@ resource "aws_codepipeline" "foo" {
   artifact_store {
   		location = "${aws_s3_bucket.main.bucket}"
   		type = "S3"
+  		encryption_key {
+  			id = "1234"
+  			type = "KMS"
+  		}
   }
 
   stage {
 	name = "Source"
 	action {
-			name = "Source"
-			category = "Source"
-			owner = "ThirdParty"
-			provider = "GitHub"
-			version = "1"
-			output_artifacts = ["test"]
-			configuration = <<EOF
-{
-    "Owner": "lifesum-terraform",
-    "Repo": "test",
-    "Branch": "master",
-    "OAuthToken": "0000000000000000000000000000000000000000"
-}
-EOF
+		name = "Source"
+		category = "Source"
+		owner = "ThirdParty"
+		provider = "GitHub"
+		version = "1"
+		output_artifacts = ["test"]
+		run_order = 1
+		configuration {
+			Owner = "lifesum-terraform"
+			Repo = "test"
+			Branch = "master"
+			OAuthToken = "0000000000000000000000000000000000000000"
 		}
+	}
   } 
 
   stage {
 	name = "Build"
 	action {
-			name = "Build"
-			category = "Build"
-			owner = "AWS"
-			provider = "CodeBuild"
-			input_artifacts = ["test"]
-			version = "1"
-			configuration = <<EOF
-{
-    "ProjectName": "test"
-}
-EOF
+		name = "Build"
+		category = "Build"
+		owner = "AWS"
+		provider = "CodeBuild"
+		input_artifacts = ["test"]
+		version = "1"
+		run_order = 2
+		configuration {
+			ProjectName = "test"
 		}
+	}
   }
 }
 `, rName, rName, rName)
