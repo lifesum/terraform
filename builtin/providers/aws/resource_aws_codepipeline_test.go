@@ -22,7 +22,7 @@ func TestAccAWSCodePipeline_basic(t *testing.T) {
 			{
 				Config: testAccAWSCodePipelineConfig_basic(name),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAWSCodePipelineExists("aws_codepipeline.foo"),
+					testAccCheckAWSCodePipelineExists("aws_codepipeline.bar"),
 				),
 			},
 		},
@@ -171,7 +171,7 @@ EOF
 }
 
 
-resource "aws_codepipeline" "foo" {
+resource "aws_codepipeline" "bar" {
   name         = "test-pipeline-%s"
   role_arn = "${aws_iam_role.codepipeline_role.arn}"
 
@@ -193,7 +193,6 @@ resource "aws_codepipeline" "foo" {
 		provider = "GitHub"
 		version = "1"
 		output_artifacts = ["test"]
-		run_order = 1
 		configuration {
 			Owner = "lifesum-terraform"
 			Repo = "test"
@@ -212,7 +211,6 @@ resource "aws_codepipeline" "foo" {
 		provider = "CodeBuild"
 		input_artifacts = ["test"]
 		version = "1"
-		run_order = 2
 		configuration {
 			ProjectName = "test"
 		}

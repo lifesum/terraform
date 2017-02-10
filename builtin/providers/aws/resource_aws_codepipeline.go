@@ -43,8 +43,9 @@ func resourceAwsCodePipeline() *schema.Resource {
 						},
 
 						"type": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validateAwsCodePipelineArtifactStoreType,
 						},
 
 						"encryption_key": {
@@ -59,8 +60,9 @@ func resourceAwsCodePipeline() *schema.Resource {
 									},
 
 									"type": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateAwsCodePipelineEncryptionKeyType,
 									},
 								},
 							},
@@ -126,6 +128,7 @@ func resourceAwsCodePipeline() *schema.Resource {
 									"run_order": {
 										Type:     schema.TypeInt,
 										Optional: true,
+										Computed: true,
 									},
 								},
 							},
@@ -136,19 +139,33 @@ func resourceAwsCodePipeline() *schema.Resource {
 		},
 	}
 }
+func validateAwsCodePipelineEncryptionKeyType(v interface{}, k string) (ws []string, errors []error) {
+	value := v.(string)
+	types := map[string]bool{
+		"KMS": true,
+	}
+
+	if !types[value] {
+		errors = append(errors, fmt.Errorf("CodePipeline: encryption_key type can only be KMS"))
+	}
+	return
+}
+
+func validateAwsCodePipelineArtifactStoreType(v interface{}, k string) (ws []string, errors []error) {
+	value := v.(string)
+	types := map[string]bool{
+		"S3": true,
+	}
+
+	if !types[value] {
+		errors = append(errors, fmt.Errorf("CodePipeline: artifact_store type can only be S3"))
+	}
+	return
+}
 
 func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).codepipelineconn
-	pipelineArtifactStore := expandAwsCodePipelineArtifactStore(d)
-	pipelineStages := expandAwsCodePipelineStages(d)
-
-	pipeline := &codepipeline.PipelineDeclaration{
-		Name:          aws.String(d.Get("name").(string)),
-		RoleArn:       aws.String(d.Get("role_arn").(string)),
-		ArtifactStore: pipelineArtifactStore,
-		Stages:        pipelineStages,
-	}
-
+	pipeline := expandAwsCodePipeline(d)
 	params := &codepipeline.CreatePipelineInput{
 		Pipeline: pipeline,
 	}
@@ -173,6 +190,18 @@ func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) err
 	return resourceAwsCodePipelineUpdate(d, meta)
 }
 
+func expandAwsCodePipeline(d *schema.ResourceData) *codepipeline.PipelineDeclaration {
+	pipelineArtifactStore := expandAwsCodePipelineArtifactStore(d)
+	pipelineStages := expandAwsCodePipelineStages(d)
+
+	pipeline := codepipeline.PipelineDeclaration{
+		Name:          aws.String(d.Get("name").(string)),
+		RoleArn:       aws.String(d.Get("role_arn").(string)),
+		ArtifactStore: pipelineArtifactStore,
+		Stages:        pipelineStages,
+	}
+	return &pipeline
+}
 func expandAwsCodePipelineArtifactStore(d *schema.ResourceData) *codepipeline.ArtifactStore {
 	configs := d.Get("artifact_store").([]interface{})
 	data := configs[0].(map[string]interface{})
@@ -203,7 +232,6 @@ func flattenAwsCodePipelineArtifactStore(artifactStore *codepipeline.ArtifactSto
 		}
 		values["encryption_key"] = []interface{}{as}
 	}
-	fmt.Printf("%#v", []interface{}{values})
 	return []interface{}{values}
 }
 
@@ -266,8 +294,9 @@ func expandAwsCodePipelineActions(s []interface{}) []*codepipeline.ActionDeclara
 			action.InputArtifacts = inputArtifacts
 
 		}
-		if data["run_order"] != nil {
-			action.RunOrder = aws.Int64(int64(data["run_order"].(int)))
+		ro := data["run_order"].(int)
+		if ro > 0 {
+			action.RunOrder = aws.Int64(int64(ro))
 		}
 		actions = append(actions, &action)
 	}
@@ -388,8 +417,22 @@ func resourceAwsCodePipelineRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceAwsCodePipelineUpdate(d *schema.ResourceData, meta interface{}) error {
-	// Todo
-	return nil
+	conn := meta.(*AWSClient).codepipelineconn
+
+	pipeline := expandAwsCodePipeline(d)
+	params := &codepipeline.UpdatePipelineInput{
+		Pipeline: pipeline,
+	}
+
+	_, err := conn.UpdatePipeline(params)
+
+	if err != nil {
+		return fmt.Errorf(
+			"[ERROR] Error updating CodePipeline (%s): %s",
+			d.Id(), err)
+	}
+
+	return resourceAwsCodePipelineRead(d, meta)
 }
 
 func resourceAwsCodePipelineDelete(d *schema.ResourceData, meta interface{}) error {
