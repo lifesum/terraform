@@ -92,16 +92,19 @@ func resourceAwsCodePipeline() *schema.Resource {
 										// http://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#d0e12846
 									},
 									"category": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateAwsCodePipelineStageActionCategory,
 									},
 									"owner": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateAwsCodePipelineStageActionOwner,
 									},
 									"provider": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateAwsCodePipelineStageActionProvider,
 									},
 									"version": {
 										Type:     schema.TypeString,
@@ -159,6 +162,37 @@ func validateAwsCodePipelineArtifactStoreType(v interface{}, k string) (ws []str
 
 	if !types[value] {
 		errors = append(errors, fmt.Errorf("CodePipeline: artifact_store type can only be S3"))
+	}
+	return
+}
+
+func validateAwsCodePipelineStageActionCategory(v interface{}, k string) (ws []string, errors []error) {
+	value := v.(string)
+	types := map[string]bool{
+		"Source":   true,
+		"Build":    true,
+		"Deploy":   true,
+		"Test":     true,
+		"Invoke":   true,
+		"Approval": true,
+	}
+
+	if !types[value] {
+		errors = append(errors, fmt.Errorf("CodePipeline: category can only be one of Source | Build | Deploy | Test | Invoke | Approval"))
+	}
+	return
+}
+
+func validateAwsCodePipelineStageActionOwner(v interface{}, k string) (ws []string, errors []error) {
+	value := v.(string)
+	types := map[string]bool{
+		"AWS":        true,
+		"ThirdParty": true,
+		"Custom":     true,
+	}
+
+	if !types[value] {
+		errors = append(errors, fmt.Errorf("CodePipeline: owner can only be one of AWS | ThirdParty | Custom"))
 	}
 	return
 }
@@ -423,7 +457,6 @@ func resourceAwsCodePipelineUpdate(d *schema.ResourceData, meta interface{}) err
 	params := &codepipeline.UpdatePipelineInput{
 		Pipeline: pipeline,
 	}
-
 	_, err := conn.UpdatePipeline(params)
 
 	if err != nil {
