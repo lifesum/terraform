@@ -205,7 +205,7 @@ func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	var resp *codepipeline.CreatePipelineOutput
-	err := resource.Retry(30*time.Second, func() *resource.RetryError {
+	err := resource.Retry(2*time.Minute, func() *resource.RetryError {
 		var err error
 
 		resp, err = conn.CreatePipeline(params)
