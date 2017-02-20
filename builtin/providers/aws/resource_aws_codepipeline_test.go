@@ -24,6 +24,10 @@ func TestAccAWSCodePipeline_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAWSCodePipelineExists("aws_codepipeline.bar"),
 				),
+			}, {
+				ResourceName:      "aws_codepipeline.bar",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -73,76 +77,6 @@ func testAccCheckAWSCodePipelineDestroy(s *terraform.State) error {
 
 	return fmt.Errorf("Default error in CodePipeline Test")
 }
-
-// JSON from AWS Console created pipeline
-// {
-//     "pipeline": {
-//         "roleArn": "arn:aws:iam::xxx:role/AWS-CodePipeline-Service",
-//         "stages": [
-//             {
-//                 "name": "Source",
-//                 "actions": [
-//                     {
-//                         "inputArtifacts": [],
-//                         "name": "Source",
-//                         "actionTypeId": {
-//                             "category": "Source",
-//                             "owner": "ThirdParty",
-//                             "version": "1",
-//                             "provider": "GitHub"
-//                         },
-//                         "outputArtifacts": [
-//                             {
-//                                 "name": "MyApp"
-//                             }
-//                         ],
-//                         "configuration": {
-//                             "Owner": "lifesum-terraform",
-//                             "Repo": "test",
-//                             "Branch": "master",
-//                             "OAuthToken": "****"
-//                         },
-//                         "runOrder": 1
-//                     }
-//                 ]
-//             },
-//             {
-//                 "name": "Build",
-//                 "actions": [
-//                     {
-//                         "inputArtifacts": [
-//                             {
-//                                 "name": "MyApp"
-//                             }
-//                         ],
-//                         "name": "CodeBuild",
-//                         "actionTypeId": {
-//                             "category": "Build",
-//                             "owner": "AWS",
-//                             "version": "1",
-//                             "provider": "CodeBuild"
-//                         },
-//                         "outputArtifacts": [
-//                             {
-//                                 "name": "MyAppBuild"
-//                             }
-//                         ],
-//                         "configuration": {
-//                             "ProjectName": "test"
-//                         },
-//                         "runOrder": 1
-//                     }
-//                 ]
-//             }
-//         ],
-//         "artifactStore": {
-//             "type": "S3",
-//             "location": "codepipeline-us-west-2-679037673204"
-//         },
-//         "name": "test",
-//         "version": 1
-//     }
-// }
 
 func testAccAWSCodePipelineConfig_basic(rName string) string {
 	return fmt.Sprintf(`
