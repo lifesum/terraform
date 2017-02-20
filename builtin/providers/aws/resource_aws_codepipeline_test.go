@@ -81,13 +81,13 @@ func testAccCheckAWSCodePipelineDestroy(s *terraform.State) error {
 func testAccAWSCodePipelineConfig_basic(rName string) string {
 	return fmt.Sprintf(`
 resource "aws_s3_bucket" "foo" {
-    bucket = "tf-test-pipeline-%s"
-    acl = "private"
+  bucket = "tf-test-pipeline-%s"
+  acl    = "private"
 }
-
 
 resource "aws_iam_role" "codepipeline_role" {
   name = "codepipeline-role-%s"
+
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -107,6 +107,7 @@ EOF
 resource "aws_iam_role_policy" "codepipeline_policy" {
   name = "codepipeline_policy"
   role = "${aws_iam_role.codepipeline_role.id}"
+
   policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -137,48 +138,53 @@ EOF
 }
 
 resource "aws_codepipeline" "bar" {
-  name         = "test-pipeline-%s"
+  name     = "test-pipeline-%s"
   role_arn = "${aws_iam_role.codepipeline_role.arn}"
 
   artifact_store {
-  		location = "${aws_s3_bucket.foo.bucket}"
-  		type = "S3"
-  		encryption_key {
-  			id = "1234"
-  			type = "KMS"
-  		}
+    location = "${aws_s3_bucket.foo.bucket}"
+    type     = "S3"
+
+    encryption_key {
+      id   = "1234"
+      type = "KMS"
+    }
   }
 
   stage {
-	name = "Source"
-	action {
-		name = "Source"
-		category = "Source"
-		owner = "ThirdParty"
-		provider = "GitHub"
-		version = "1"
-		output_artifacts = ["test"]
-		configuration {
-			Owner = "lifesum-terraform"
-			Repo = "test"
-			Branch = "master"
-		}
-	}
-  } 
+    name = "Source"
+
+    action {
+      name             = "Source"
+      category         = "Source"
+      owner            = "ThirdParty"
+      provider         = "GitHub"
+      version          = "1"
+      output_artifacts = ["test"]
+
+      configuration {
+        Owner  = "lifesum-terraform"
+        Repo   = "test"
+        Branch = "master"
+      }
+    }
+  }
 
   stage {
-	name = "Build"
-	action {
-		name = "Build"
-		category = "Build"
-		owner = "AWS"
-		provider = "CodeBuild"
-		input_artifacts = ["test"]
-		version = "1"
-		configuration {
-			ProjectName = "test"
-		}
-	}
+    name = "Build"
+
+    action {
+      name            = "Build"
+      category        = "Build"
+      owner           = "AWS"
+      provider        = "CodeBuild"
+      input_artifacts = ["test"]
+      version         = "1"
+
+      configuration {
+        ProjectName = "test"
+      }
+    }
   }
 }
 `, rName, rName, rName)
