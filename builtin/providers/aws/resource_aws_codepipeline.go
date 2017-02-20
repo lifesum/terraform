@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -88,8 +89,6 @@ func resourceAwsCodePipeline() *schema.Resource {
 									"configuration": {
 										Type:     schema.TypeMap,
 										Optional: true,
-										// Somehow validate against
-										// http://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#d0e12846
 									},
 									"category": {
 										Type:         schema.TypeString,
@@ -102,9 +101,8 @@ func resourceAwsCodePipeline() *schema.Resource {
 										ValidateFunc: validateAwsCodePipelineStageActionOwner,
 									},
 									"provider": {
-										Type:         schema.TypeString,
-										Required:     true,
-										ValidateFunc: validateAwsCodePipelineStageActionProvider,
+										Type:     schema.TypeString,
+										Required: true,
 									},
 									"version": {
 										Type:     schema.TypeString,
@@ -197,6 +195,20 @@ func validateAwsCodePipelineStageActionOwner(v interface{}, k string) (ws []stri
 	return
 }
 
+func validateAwsCodePipelineStageActionConfiguration(v interface{}, k string) (ws []string, errors []error) {
+	value := v.(map[string]interface{})
+	types := map[string]bool{
+		"OAuthToken": true,
+	}
+
+	for k := range value {
+		if types[k] {
+			errors = append(errors, fmt.Errorf("CodePipeline: OAuthToken should be set as environment variable 'GITHUB_TOKEN'"))
+		}
+	}
+	return
+}
+
 func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).codepipelineconn
 	pipeline := expandAwsCodePipeline(d)
@@ -220,7 +232,6 @@ func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) err
 		return fmt.Errorf("[ERROR] Error creating CodePipeline: %s", err)
 	}
 	d.SetId(*resp.Pipeline.Name)
-
 	return resourceAwsCodePipelineUpdate(d, meta)
 }
 
@@ -303,6 +314,13 @@ func expandAwsCodePipelineActions(s []interface{}) []*codepipeline.ActionDeclara
 		data := config.(map[string]interface{})
 
 		conf := expandAwsCodePipelineStageActionConfiguration(data["configuration"].(map[string]interface{}))
+		if data["provider"].(string) == "GitHub" {
+			githubToken := os.Getenv("GITHUB_TOKEN")
+			if githubToken != "" {
+				conf["OAuthToken"] = aws.String(githubToken)
+			}
+
+		}
 
 		action := codepipeline.ActionDeclaration{
 			ActionTypeId: &codepipeline.ActionTypeId{
@@ -348,7 +366,13 @@ func flattenAwsCodePipelineStageActions(actions []*codepipeline.ActionDeclaratio
 			"name":     *action.Name,
 		}
 		if action.Configuration != nil {
-			values["configuration"] = flattenAwsCodePipelineStageActionConfiguration(action.Configuration)
+			config := flattenAwsCodePipelineStageActionConfiguration(action.Configuration)
+			_, ok := config["OAuthToken"]
+			actionProvider := *action.ActionTypeId.Provider
+			if ok && actionProvider == "GitHub" {
+				delete(config, "OAuthToken")
+			}
+			values["configuration"] = config
 		}
 
 		if len(action.OutputArtifacts) > 0 {
@@ -380,12 +404,7 @@ func expandAwsCodePipelineStageActionConfiguration(config map[string]interface{}
 func flattenAwsCodePipelineStageActionConfiguration(config map[string]*string) map[string]string {
 	m := map[string]string{}
 	for k, v := range config {
-		// Figure out what to do with OAuthToken
-		if k == "OAuthToken" {
-			m[k] = "0000000000000000000000000000000000000000"
-		} else {
-			m[k] = *v
-		}
+		m[k] = *v
 	}
 	return m
 }
