@@ -80,7 +80,7 @@ func testAccCheckAWSCodePipelineDestroy(s *terraform.State) error {
 
 func testAccAWSCodePipelineConfig_basic(rName string) string {
 	return fmt.Sprintf(`
-resource "aws_s3_bucket" "main" {
+resource "aws_s3_bucket" "foo" {
     bucket = "tf-test-pipeline-%s"
     acl = "private"
 }
@@ -104,13 +104,44 @@ resource "aws_iam_role" "codepipeline_role" {
 EOF
 }
 
+resource "aws_iam_role_policy" "codepipeline_policy" {
+  name = "codepipeline_policy"
+  role = "${aws_iam_role.codepipeline_role.id}"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect":"Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:GetBucketVersioning"
+      ],
+      "Resource": [
+        "${aws_s3_bucket.foo.arn}",
+        "${aws_s3_bucket.foo.arn}/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "codebuild:BatchGetBuilds",
+        "codebuild:StartBuild"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
 
 resource "aws_codepipeline" "bar" {
   name         = "test-pipeline-%s"
   role_arn = "${aws_iam_role.codepipeline_role.arn}"
 
   artifact_store {
-  		location = "${aws_s3_bucket.main.bucket}"
+  		location = "${aws_s3_bucket.foo.bucket}"
   		type = "S3"
   		encryption_key {
   			id = "1234"
@@ -131,7 +162,6 @@ resource "aws_codepipeline" "bar" {
 			Owner = "lifesum-terraform"
 			Repo = "test"
 			Branch = "master"
-			OAuthToken = "0000000000000000000000000000000000000000"
 		}
 	}
   } 
