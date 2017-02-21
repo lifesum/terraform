@@ -101,8 +101,9 @@ func resourceAwsCodePipeline() *schema.Resource {
 										ValidateFunc: validateAwsCodePipelineStageActionOwner,
 									},
 									"provider": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateAwsCodePipelineStageActionProvider,
 									},
 									"version": {
 										Type:     schema.TypeString,
@@ -209,6 +210,29 @@ func validateAwsCodePipelineStageActionConfiguration(v interface{}, k string) (w
 	return
 }
 
+func validateAwsCodePipelineStageActionProvider(v interface{}, k string) (ws []string, errors []error) {
+	value := v.(string)
+	types := map[string]bool{
+		"S3":               true,
+		"CodeCommit":       true,
+		"GitHub":           true,
+		"CloudFormation":   true,
+		"CodeBuild":        true,
+		"CodeDeploy":       true,
+		"ElasticBeanstalk": true,
+		"Lambda":           true,
+		"Jenkins":          true,
+	}
+
+	if !types[value] {
+		errors = append(errors, fmt.Errorf("CodePipeline: Provider can only be one of S3 | CodeCommit | GitHub | CloudFormation | CodeBuild | CodeDeploy | ElasticBeanstalk | Lambda"))
+	}
+
+	if value == "GitHub" && os.Getenv("GITHUB_TOKEN") == "" {
+		errors = append(errors, fmt.Errorf("CodePipeline: OAuthToken should be set as environment variable 'GITHUB_TOKEN'"))
+	}
+	return
+}
 func resourceAwsCodePipelineCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).codepipelineconn
 	pipeline := expandAwsCodePipeline(d)
