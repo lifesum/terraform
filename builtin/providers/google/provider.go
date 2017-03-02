@@ -106,6 +106,7 @@ func Provider() terraform.ResourceProvider {
 			"google_storage_bucket_acl":             resourceStorageBucketAcl(),
 			"google_storage_bucket_object":          resourceStorageBucketObject(),
 			"google_storage_object_acl":             resourceStorageObjectAcl(),
+			// "google_appengine":                      resourceAppEngine(),
 		},
 
 		ConfigureFunc: providerConfigure,
