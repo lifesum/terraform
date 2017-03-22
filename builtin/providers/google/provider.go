@@ -15,6 +15,13 @@ import (
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
+			"account_file": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("GOOGLE_ACCOUNT_FILE", nil),
+				Removed:     "Use the credentials field instead",
+			},
+
 			"credentials": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
@@ -98,9 +105,7 @@ func Provider() terraform.ResourceProvider {
 			"google_storage_bucket_acl":             resourceStorageBucketAcl(),
 			"google_storage_bucket_object":          resourceStorageBucketObject(),
 			"google_storage_object_acl":             resourceStorageObjectAcl(),
-			"google_bigquery_dataset":               resourceBigQueryDataset(),
-			"google_bigquery_table":                 resourceBigQueryTable(),
-			"google_appengine_version":              resourceAppEngineVersion(),
+			"google_appengine_application":          resourceAppEngineApplication(),
 		},
 
 		ConfigureFunc: providerConfigure,

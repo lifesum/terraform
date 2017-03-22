@@ -14,7 +14,6 @@ import (
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	appengine "google.golang.org/api/appengine/v1"
-	bigquery "google.golang.org/api/bigquery/v2"
 	"google.golang.org/api/cloudbilling/v1"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
@@ -44,7 +43,6 @@ type Config struct {
 	clientSqlAdmin        *sqladmin.Service
 	clientIAM             *iam.Service
 	clientServiceMan      *servicemanagement.APIService
-	clientBigQuery        *bigquery.Service
 	clientAppEngine       *appengine.APIService
 }
 
@@ -173,14 +171,7 @@ func (c *Config) loadAndValidate() error {
 	}
 	c.clientBilling.UserAgent = userAgent
 
-	log.Printf("[INFO] Instantiating Google Cloud BigQuery Client...")
-	c.clientBigQuery, err = bigquery.New(client)
-	if err != nil {
-		return err
-	}
-	c.clientBigQuery.UserAgent = userAgent
-
-	log.Printf("[INFO] Instantiating Google Cloud AppEngine Client...")
+	log.Printf("[INFO] Instantiating Google AppEngine Client...")
 	c.clientAppEngine, err = appengine.New(client)
 	if err != nil {
 		return err
