@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -14,12 +13,12 @@ func TestAccAppEngineApplication_Basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckPubsubTopicDestroy,
+		CheckDestroy: testAccCheckAppEngineApplicationDestroy,
 		Steps: []resource.TestStep{
 			resource.TestStep{
-				Config: testAccPubsubTopic,
+				Config: testAccAppEngineApplication,
 				Check: resource.ComposeTestCheckFunc(
-					testAccPubsubTopicExists(
+					testAccAppEngineApplicationExists(
 						"google_appengine_application.foobar"),
 				),
 			},
@@ -27,23 +26,23 @@ func TestAccAppEngineApplication_Basic(t *testing.T) {
 	})
 }
 
-func testAccCheckPubsubTopicDestroy(s *terraform.State) error {
+func testAccCheckAppEngineApplicationDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "google_pubsub_topic" {
+		if rs.Type != "google_appengine_application" {
 			continue
 		}
 
 		config := testAccProvider.Meta().(*Config)
-		topic, _ := config.clientPubsub.Projects.Topics.Get(rs.Primary.ID).Do()
-		if topic != nil {
-			return fmt.Errorf("Topic still present")
+		app, _ := config.clientAppEngine.Apps.Get(rs.Primary.ID).Do()
+		if app != nil {
+			return fmt.Errorf("Application still present")
 		}
 	}
 
 	return nil
 }
 
-func testAccPubsubTopicExists(n string) resource.TestCheckFunc {
+func testAccAppEngineApplicationExists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -54,16 +53,15 @@ func testAccPubsubTopicExists(n string) resource.TestCheckFunc {
 			return fmt.Errorf("No ID is set")
 		}
 		config := testAccProvider.Meta().(*Config)
-		_, err := config.clientPubsub.Projects.Topics.Get(rs.Primary.ID).Do()
+		_, err := config.clientAppEngine.Apps.Get(rs.Primary.ID).Do()
 		if err != nil {
-			return fmt.Errorf("Topic does not exist")
+			return fmt.Errorf("Application does not exist")
 		}
 
 		return nil
 	}
 }
 
-var testAccPubsubTopic = fmt.Sprintf(`
-resource "google_pubsub_topic" "foobar" {
-	name = "pstopic-test-%s"
-}`, acctest.RandString(10))
+var testAccAppEngineApplication = `
+resource "google_appengine_application" "foobar" {}
+`

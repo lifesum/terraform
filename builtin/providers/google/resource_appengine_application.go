@@ -11,19 +11,7 @@ func resourceAppEngineApplication() *schema.Resource {
 		Read:   resourceAppEngineRead,
 		Delete: resourceAppEngineDelete,
 
-		Schema: map[string]*schema.Schema{
-			"project": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-
-			"location_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-		},
+		Schema: map[string]*schema.Schema{},
 	}
 }
 
@@ -37,7 +25,7 @@ func resourceAppEngineCreate(d *schema.ResourceData, meta interface{}) error {
 
 	call := config.clientAppEngine.Apps.Create(&appengine.Application{
 		Id:         project,
-		LocationId: d.Get("location_id").(string),
+		LocationId: "europe-west",
 	})
 
 	res, err := call.Do()
