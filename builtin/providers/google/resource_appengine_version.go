@@ -293,6 +293,13 @@ func resourceAppEngineVersion() *schema.Resource {
 				Default:  []string{"INBOUND_SERVICE_WARMUP"},
 			},
 
+			// Threadsafe: Whether multiple requests can be dispatched to this
+			// version at once.
+			"threadsafe": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+
 			// Deployment: Code and application artifacts that make up this
 			// version.Only returned in GET requests if view=FULL is set.
 			"deployment": {
@@ -381,6 +388,10 @@ func resourceAppEngineVersionR(d *schema.ResourceData, meta interface{}) *appeng
 
 	if v, ok := d.GetOk("deployment"); ok {
 		appVersion.Deployment = expandDeployment(v)
+	}
+
+	if v, ok := d.GetOk("threadsafe"); ok {
+		appVersion.Threadsafe = v.(bool)
 	}
 
 	if v, ok := d.GetOk("inbound_services"); ok {
