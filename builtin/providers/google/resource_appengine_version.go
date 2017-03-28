@@ -267,6 +267,32 @@ func resourceAppEngineVersion() *schema.Resource {
 				Computed: true,
 			},
 
+			// InboundServices: Before an application can receive email or XMPP
+			// messages, the application must be configured to enable the service.
+			//
+			// Possible values:
+			//   "INBOUND_SERVICE_UNSPECIFIED" - Not specified.
+			//   "INBOUND_SERVICE_MAIL" - Allows an application to receive mail.
+			//   "INBOUND_SERVICE_MAIL_BOUNCE" - Allows an application to receive
+			// email-bound notifications.
+			//   "INBOUND_SERVICE_XMPP_ERROR" - Allows an application to receive
+			// error stanzas.
+			//   "INBOUND_SERVICE_XMPP_MESSAGE" - Allows an application to receive
+			// instant messages.
+			//   "INBOUND_SERVICE_XMPP_SUBSCRIBE" - Allows an application to receive
+			// user subscription POSTs.
+			//   "INBOUND_SERVICE_XMPP_PRESENCE" - Allows an application to receive
+			// a user's chat presence.
+			//   "INBOUND_SERVICE_CHANNEL_PRESENCE" - Registers an application for
+			// notifications when a client connects or disconnects from a channel.
+			//   "INBOUND_SERVICE_WARMUP" - Enables warmup requests.
+			"inbound_services": {
+				Type:     schema.Typelist,
+				Optional: true,
+				Elem:     schema.TypeString,
+				Default:  []string{"INBOUND_SERVICE_WARMUP"},
+			},
+
 			// Deployment: Code and application artifacts that make up this
 			// version.Only returned in GET requests if view=FULL is set.
 			"deployment": {
@@ -303,6 +329,17 @@ func resourceAppEngineVersion() *schema.Resource {
 		},
 	}
 }
+func expandDeployment(configured interface{}) *appengine.Deployment {
+	raw := configured.([]interface{})[0].(map[string]interface{})
+	deploy := &appengine.Deployment{}
+
+	if v, ok := raw["container"]; ok {
+		container := v.([]interface{})[0].(map[string]interface{})
+		deploy.Container.Image = container["image"].(string)
+	}
+
+	return deploy
+}
 
 func expandAutomaticScaling(configured interface{}) *appengine.AutomaticScaling {
 	raw := configured.([]interface{})[0].(map[string]interface{})
@@ -331,11 +368,27 @@ func expandAutomaticScaling(configured interface{}) *appengine.AutomaticScaling 
 	return scaling
 }
 
-func resourceAppEngineVersion(d *schema.ResourceData, meta interface{}) *appengine.Version {
+func resourceAppEngineVersionR(d *schema.ResourceData, meta interface{}) *appengine.Version {
 	appVersion := &appengine.Version{}
 
 	if v, ok := d.GetOk("version"); ok {
 		appVersion.Id = v.(string)
+	}
+
+	if v, ok := d.GetOk("runtime"); ok {
+		appVersion.Runtime = v.(string)
+	}
+
+	if v, ok := d.GetOk("deployment"); ok {
+		appVersion.Deployment = expandDeployment(v)
+	}
+
+	if v, ok := d.GetOk("inbound_services"); ok {
+		var services []string
+		for _, service := range v.([]interface{}) {
+			services = append(services, service.(string))
+		}
+		appVersion.InboundServices = services
 	}
 
 	if v, ok := d.GetOk("scaling"); ok {
@@ -348,7 +401,7 @@ func resourceAppEngineVersion(d *schema.ResourceData, meta interface{}) *appengi
 func resourceAppEngineVersionCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	version := resourceAppEngineVersion(d, meta)
+	version := resourceAppEngineVersionR(d, meta)
 
 	appsID := d.Get("apps_id").(string)
 	servicesID := d.Get("services_id").(string)
