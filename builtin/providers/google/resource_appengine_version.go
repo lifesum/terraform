@@ -1,6 +1,8 @@
 package google
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	appengine "google.golang.org/api/appengine/v1"
 )
@@ -15,9 +17,21 @@ func resourceAppEngineVersion() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
+			// ProjectId: [Optional] The ID of the project containing this dataset.
+			"project": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
 			"version": {
 				Type:     schema.TypeString,
 				Optional: true,
+			},
+
+			"runtime": {
+				Type:     schema.TypeString,
+				Required: true,
 			},
 
 			"apps_id": {
@@ -287,10 +301,11 @@ func resourceAppEngineVersion() *schema.Resource {
 			// notifications when a client connects or disconnects from a channel.
 			//   "INBOUND_SERVICE_WARMUP" - Enables warmup requests.
 			"inbound_services": {
-				Type:     schema.Typelist,
+				Type:     schema.TypeList,
 				Optional: true,
-				Elem:     schema.TypeString,
-				Default:  []string{"INBOUND_SERVICE_WARMUP"},
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 
 			// Threadsafe: Whether multiple requests can be dispatched to this
@@ -336,9 +351,20 @@ func resourceAppEngineVersion() *schema.Resource {
 		},
 	}
 }
+
 func expandDeployment(configured interface{}) *appengine.Deployment {
 	raw := configured.([]interface{})[0].(map[string]interface{})
 	deploy := &appengine.Deployment{}
+
+	bucketName := "lifesum-terraform.appspot.com"
+	bucketKey := "index.html"
+	bucketURL := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, bucketKey)
+
+	files := make(map[string]appengine.FileInfo)
+	files[bucketURL] = appengine.FileInfo{
+		SourceUrl: bucketURL,
+	}
+	deploy.Files = files
 
 	if v, ok := raw["container"]; ok {
 		container := v.([]interface{})[0].(map[string]interface{})
@@ -346,6 +372,21 @@ func expandDeployment(configured interface{}) *appengine.Deployment {
 	}
 
 	return deploy
+}
+
+func expandBasicScaling(configured interface{}) *appengine.BasicScaling {
+	raw := configured.([]interface{})[0].(map[string]interface{})
+	scaling := &appengine.BasicScaling{}
+
+	if v, ok := raw["idle_timeout"]; ok {
+		scaling.IdleTimeout = v.(string)
+	}
+
+	if v, ok := raw["max_instances"]; ok {
+		scaling.MaxInstances = int64(v.(int))
+	}
+
+	return scaling
 }
 
 func expandAutomaticScaling(configured interface{}) *appengine.AutomaticScaling {
@@ -376,37 +417,51 @@ func expandAutomaticScaling(configured interface{}) *appengine.AutomaticScaling 
 }
 
 func resourceAppEngineVersionR(d *schema.ResourceData, meta interface{}) *appengine.Version {
-	appVersion := &appengine.Version{}
+	bucketName := "lifesum-terraform.appspot.com"
+	bucketKey := "index.html"
+	bucketURL := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, bucketKey)
 
-	if v, ok := d.GetOk("version"); ok {
-		appVersion.Id = v.(string)
+	version := &appengine.Version{}
+
+	return &appengine.Version{
+		BasicScaling:    &appengine.BasicScaling{MaxInstances: 3},
+		Deployment:      &appengine.Deployment{Files: map[string]appengine.FileInfo{"index.html": appengine.FileInfo{SourceUrl: bucketURL}}},
+		Id:              "foobaaz",
+		Runtime:         "python27",
+		InboundServices: []string{"INBOUND_SERVICE_WARMUP"},
+		EnvVariables:    map[string]string{"foo": "true"},
+		Threadsafe:      false,
 	}
 
-	if v, ok := d.GetOk("runtime"); ok {
-		appVersion.Runtime = v.(string)
-	}
-
-	if v, ok := d.GetOk("deployment"); ok {
-		appVersion.Deployment = expandDeployment(v)
-	}
-
-	if v, ok := d.GetOk("threadsafe"); ok {
-		appVersion.Threadsafe = v.(bool)
-	}
-
-	if v, ok := d.GetOk("inbound_services"); ok {
-		var services []string
-		for _, service := range v.([]interface{}) {
-			services = append(services, service.(string))
-		}
-		appVersion.InboundServices = services
-	}
-
-	if v, ok := d.GetOk("scaling"); ok {
-		appVersion.AutomaticScaling = expandAutomaticScaling(v)
-	}
-
-	return appVersion
+	//
+	// if v, ok := d.GetOk("runtime"); ok {
+	// 	appVersion.Runtime = v.(string)
+	// }
+	//
+	// if v, ok := d.GetOk("deployment"); ok {
+	// 	appVersion.Deployment = expandDeployment(v)
+	// }
+	//
+	// if v, ok := d.GetOk("threadsafe"); ok {
+	// 	appVersion.Threadsafe = v.(bool)
+	// }
+	//
+	// if v, ok := d.GetOk("inbound_services"); ok {
+	// 	var services []string
+	// 	for _, service := range v.([]interface{}) {
+	// 		services = append(services, service.(string))
+	// 	}
+	// 	appVersion.InboundServices = services
+	// }
+	//
+	// if v, ok := d.GetOk("automatic_scaling"); ok {
+	// 	appVersion.AutomaticScaling = expandAutomaticScaling(v)
+	// }
+	//
+	// if v, ok := d.GetOk("basic_scaling"); ok {
+	// 	appVersion.BasicScaling = expandBasicScaling(v)
+	// }
+	// return appVersion
 }
 
 func resourceAppEngineVersionCreate(d *schema.ResourceData, meta interface{}) error {
@@ -414,10 +469,11 @@ func resourceAppEngineVersionCreate(d *schema.ResourceData, meta interface{}) er
 
 	version := resourceAppEngineVersionR(d, meta)
 
+	j, _ := version.MarshalJSON()
+	return fmt.Errorf("JSON: \n%s", j)
 	appsID := d.Get("apps_id").(string)
-	servicesID := d.Get("services_id").(string)
 
-	op, err := config.clientAppEngine.Apps.Services.Versions.Create(appsID, servicesID, version).Do()
+	op, err := config.clientAppEngine.Apps.Services.Versions.Create(appsID+"/"+"default", "default", version).Do()
 	if err != nil {
 		return err
 	}
@@ -436,7 +492,7 @@ func resourceAppEngineVersionRead(d *schema.ResourceData, meta interface{}) erro
 
 	appsID := d.Get("apps_id").(string)
 	servicesID := d.Get("services_id").(string)
-	versionsID := d.Get("versions_id").(string)
+	versionsID := d.Get("version").(string)
 
 	res, err := config.clientAppEngine.Apps.Services.Versions.Get(appsID, servicesID, versionsID).Do()
 	if err != nil {

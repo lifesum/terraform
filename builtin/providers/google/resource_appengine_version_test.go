@@ -2,6 +2,7 @@ package google
 
 import (
 	"fmt"
+	"log"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
@@ -32,7 +33,12 @@ func testAccCheckAppEngineDestroy(s *terraform.State) error {
 		}
 
 		config := testAccProvider.Meta().(*Config)
-		ver, _ := config.clientAppEngine.Apps.Services.Versions.Get(rs.Primary.Attributes["apps_id"], rs.Primary.Attributes["services_id"], rs.Primary.Attributes["versions_id"]).Do()
+		servicesID := rs.Primary.Attributes["services_id"]
+		appsID := rs.Primary.Attributes["apps_id"]
+		versionsID := rs.Primary.Attributes["version"]
+
+		log.Printf("HERE (testAccCheckAppEngineDestroy) %s/%s/%s", appsID, versionsID, servicesID)
+		ver, _ := config.clientAppEngine.Apps.Services.Versions.Get(rs.Primary.Attributes["apps_id"], rs.Primary.Attributes["services_id"], rs.Primary.Attributes["version"]).Do()
 		if ver != nil {
 			return fmt.Errorf("Version still present")
 		}
@@ -52,8 +58,13 @@ func testAccAppEngineExists(n string) resource.TestCheckFunc {
 			return fmt.Errorf("No ID is set")
 		}
 		config := testAccProvider.Meta().(*Config)
+		servicesID := rs.Primary.Attributes["services_id"]
+		appsID := rs.Primary.Attributes["apps_id"]
+		versionsID := rs.Primary.Attributes["version"]
 
-		_, err := config.clientAppEngine.Apps.Services.Versions.Get(rs.Primary.Attributes["apps_id"], rs.Primary.Attributes["services_id"], rs.Primary.Attributes["versions_id"]).Do()
+		log.Printf("HERE (testAccAppEngineExists) %s/%s/%s", appsID, versionsID, servicesID)
+
+		_, err := config.clientAppEngine.Apps.Services.Versions.Get(rs.Primary.Attributes["apps_id"], rs.Primary.Attributes["services_id"], rs.Primary.Attributes["version"]).Do()
 		if err != nil {
 			return fmt.Errorf("BigQuery Dataset not present")
 		}
@@ -64,6 +75,13 @@ func testAccAppEngineExists(n string) resource.TestCheckFunc {
 
 var testAccAppEngine = `
 resource "google_appengine_version" "foobar" {
-  apps_id = "foo"
+  apps_id = "lifesum-terraform"
+	services_id = "default"
+	version = "foobaaz"
+	runtime = "python27"
+
+	basic_scaling {
+	  max_instances = 3
+  }
 }
 `
