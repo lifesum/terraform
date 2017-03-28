@@ -100,6 +100,7 @@ func Provider() terraform.ResourceProvider {
 			"google_storage_object_acl":             resourceStorageObjectAcl(),
 			"google_bigquery_dataset":               resourceBigQueryDataset(),
 			"google_bigquery_table":                 resourceBigQueryTable(),
+			"google_appengine_version":              resourceAppEngineVersion(),
 		},
 
 		ConfigureFunc: providerConfigure,
