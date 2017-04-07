@@ -15,7 +15,7 @@ Creates a dataset resource for Google BigQuery. For more information see
 
 ## Example Usage
 
-```js
+```hcl
 resource "google_bigquery_dataset" "default" {
   dataset_id                  = "test"
   friendly_name               = "test"
