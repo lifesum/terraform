@@ -208,6 +208,8 @@ func resourceBigQueryDatasetCreate(d *schema.ResourceData, meta interface{}) err
 		return err
 	}
 
+	log.Printf("[INFO] BigQuery dataset %s has been created", res.Id)
+
 	d.SetId(res.Id)
 
 	return resourceBigQueryDatasetRead(d, meta)
@@ -229,6 +231,7 @@ func resourceBigQueryDatasetRead(d *schema.ResourceData, meta interface{}) error
 	res, err := config.clientBigQuery.Datasets.Get(projectID, datasetID).Do()
 	if err != nil {
 		if gerr, ok := err.(*googleapi.Error); ok && gerr.Code == 404 {
+			log.Printf("[WARN] Removing BigQuery dataset %q because it's gone", datasetID)
 			// The resource doesn't exist anymore
 			d.SetId("")
 
@@ -260,6 +263,8 @@ func resourceBigQueryDatasetUpdate(d *schema.ResourceData, meta interface{}) err
 		return err
 	}
 
+	log.Printf("[INFO] Updating BigQuery dataset: %s", d.Id())
+
 	projectID, datasetID := resourceBigQueryDatasetParseID(d.Id())
 
 	if _, err = config.clientBigQuery.Datasets.Update(projectID, datasetID, dataset).Do(); err != nil {
@@ -277,6 +282,8 @@ func resourceBigQueryDatasetDelete(d *schema.ResourceData, meta interface{}) err
 		d.SetId("")
 		return nil
 	}
+
+	log.Printf("[INFO] Deleting BigQuery dataset: %s", d.Id())
 
 	projectID, datasetID := resourceBigQueryDatasetParseID(d.Id())
 
