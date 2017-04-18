@@ -129,12 +129,6 @@ func resourceBigQueryDataset() *schema.Resource {
 				Computed: true,
 			},
 
-			// Kind: [Output-only] The resource type.
-			"kind": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-
 			// CreationTime: [Output-only] The time when this dataset was created,
 			// in milliseconds since the epoch.
 			"creation_time": {
@@ -244,7 +238,6 @@ func resourceBigQueryDatasetRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	d.Set("kind", res.Kind)
 	d.Set("etag", res.Etag)
 	d.Set("labels", res.Labels)
 	d.Set("location", res.Location)
