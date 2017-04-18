@@ -50,9 +50,7 @@ The following arguments are supported:
     Changing this forces a new resource to be created.
 
 * `default_table_expiration_ms` - (Optional) The default lifetime of all
-    tables in the dataset, in milliseconds.
-
-    The minimum value is 3600000
+    tables in the dataset, in milliseconds. The minimum value is 3600000
     milliseconds (one hour).
 
     Once this property is set, all newly-created
